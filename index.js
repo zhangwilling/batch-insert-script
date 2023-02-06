@@ -73,7 +73,7 @@ async function chunk(realm, chunkStartId, chunkStep, { batchCountLimit, jobStart
   while (currentChunkStep < chunkStep) {
     let id = chunkStartId + currentChunkStep;
 
-    while (currentBatchCount < batchCountLimit) {
+    while (currentBatchCount < batchCountLimit && currentBatchCount < chunkStep) {
       ++id;
       // values 集合
       insertValueArr.push(`(${id})`)
