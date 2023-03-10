@@ -3,7 +3,8 @@ const BATCH_ITEM_COUNT = 100;
 const SLEEP_TIME = 30; // 30s
 
 
-// mainMysql(0, 24000000)
+mainMysql(0, 24000000)
+mainPgSql(0, 24000000)
 mainOB(0, 24000000)
 
 async function mainMysql(startId, step) {
@@ -11,12 +12,25 @@ async function mainMysql(startId, step) {
   const realm = new Realm({
     host: 'localhost',
     user: 'root',
-    database: 'test'
+    database: 'mytest'
   });
-  // mysql 一次可以批量插贼多，OB 需要歇歇
   // 你可以试试改为注释的这行，无休的批量插入
-  // await chunk(realm, startId, step, { batchCountLimit: BATCH_ITEM_COUNT, jobStartId: startId });
-  await sleepChunkJob(realm, startId, step)
+  await chunk(realm, startId, step, { batchCountLimit: BATCH_ITEM_COUNT, jobStartId: startId });
+  // await sleepChunkJob(realm, startId, step)
+  process.exit();
+}
+
+async function mainPgSql(startId, step) {
+  const Realm = require('leoric');
+  const realm = new Realm({
+    dialect: 'postgres',
+    host: 'localhost',
+    user: 'postgres',
+    password: 'postgrespw',
+    database: 'mytest'
+  });
+  await chunk(realm, startId, step, { batchCountLimit: BATCH_ITEM_COUNT, jobStartId: startId });
+  // await sleepChunkJob(realm, startId, step)
   process.exit();
 }
 
@@ -27,9 +41,11 @@ async function mainOB(startId, step) {
     host: 'localhost',
     port: '2881',
     user: 'root',
-    database: 'ob-test'
+    database: 'mytest'
   });
-  await sleepChunkJob(realm, startId, step);
+  // 内存有压力, OB 得歇歇
+  // await chunk(realm, startId, step, { batchCountLimit: BATCH_ITEM_COUNT, jobStartId: startId });
+  await sleepChunkJob(realm, startId, step)
   process.exit();
 }
 
