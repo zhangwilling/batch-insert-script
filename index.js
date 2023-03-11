@@ -2,6 +2,35 @@ const CHUNK_ITEM_COUNT = 200000;
 const BATCH_ITEM_COUNT = 100;
 const SLEEP_TIME = 30; // 30s
 
+/**
+-- Mysql、OB
+DROP TABLE IF EXISTS `count_test`;
+CREATE TABLE `count_test` (
+  `id` int NOT NULL AUTO_INCREMENT,
+  `col1` varchar(255) NOT NULL,
+  `col2` int NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_col1` (`col1`),
+  KEY `idx_col2` (`col2`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Pg
+DROP  TABLE IF EXISTS "count_test";
+CREATE TABLE "count_test" (
+  "id" int4 NOT NULL,
+  "col1" varchar(255) NOT NULL,
+  "col2" int4 NOT NULL,
+  PRIMARY KEY ("id")
+);
+CREATE INDEX "idx_col1" ON "count_test" USING btree (
+  "col1"
+);
+CREATE INDEX "idx_col2" ON "count_test" USING btree (
+  "col2"
+);
+ */
+const sqlFactory = (insertStr) => `INSERT INTO count_test(id, col1, col2)  VALUES ${insertStr}`;
+const valueFactory = (id) => `(${id},'string-${id}', 1)`
 
 mainMysql(0, 24000000)
 mainPgSql(0, 24000000)
@@ -17,7 +46,7 @@ async function mainMysql(startId, step) {
   // 你可以试试改为注释的这行，无休的批量插入
   await chunk(realm, startId, step, { batchCountLimit: BATCH_ITEM_COUNT, jobStartId: startId });
   // await sleepChunkJob(realm, startId, step)
-  process.exit();
+  // process.exit();
 }
 
 async function mainPgSql(startId, step) {
@@ -27,11 +56,12 @@ async function mainPgSql(startId, step) {
     host: 'localhost',
     user: 'postgres',
     password: 'postgrespw',
-    database: 'mytest'
+    database: 'mytest',
+    port: 5433
   });
   await chunk(realm, startId, step, { batchCountLimit: BATCH_ITEM_COUNT, jobStartId: startId });
   // await sleepChunkJob(realm, startId, step)
-  process.exit();
+  // process.exit();
 }
 
 async function mainOB(startId, step) {
@@ -43,10 +73,10 @@ async function mainOB(startId, step) {
     user: 'root',
     database: 'mytest'
   });
-  // 内存有压力, OB 得歇歇
-  // await chunk(realm, startId, step, { batchCountLimit: BATCH_ITEM_COUNT, jobStartId: startId });
-  await sleepChunkJob(realm, startId, step)
-  process.exit();
+  await chunk(realm, startId, step, { batchCountLimit: BATCH_ITEM_COUNT, jobStartId: startId });
+  // 跟 docker 环境压力有关，如果内存有压力, OB 得歇歇，用这个慢慢插。
+  // await sleepChunkJob(realm, startId, step)
+  // process.exit();
 }
 
 async function sleepChunkJob(realm, startId, step) {
@@ -92,7 +122,7 @@ async function chunk(realm, chunkStartId, chunkStep, { batchCountLimit, jobStart
     while (currentBatchCount < batchCountLimit && currentBatchCount < chunkStep) {
       ++id;
       // values 集合
-      insertValueArr.push(`(${id})`)
+      insertValueArr.push(valueFactory(id))
 
       currentBatchCount++;
     }
@@ -101,7 +131,7 @@ async function chunk(realm, chunkStartId, chunkStep, { batchCountLimit, jobStart
 
     try {
       // insert into 语句
-      await realm.query(`INSERT INTO table_name(id) VALUES ${insertStr}`);
+      await realm.query(sqlFactory(insertStr));
     } catch (e) {
       console.log("🚀 exec sql error", e);
     }
