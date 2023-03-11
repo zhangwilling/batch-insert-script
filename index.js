@@ -2,38 +2,17 @@ const CHUNK_ITEM_COUNT = 200000;
 const BATCH_ITEM_COUNT = 100;
 const SLEEP_TIME = 30; // 30s
 
-/**
--- Mysql、OB
-DROP TABLE IF EXISTS `count_test`;
-CREATE TABLE `count_test` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `col1` varchar(255) NOT NULL,
-  `col2` int NOT NULL,
-  PRIMARY KEY (`id`),
-  KEY `idx_col1` (`col1`),
-  KEY `idx_col2` (`col2`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+// simple insert
+// const valueFactory = (id) => `(${id},'string-${id}', 1)`
+// const sqlFactory = (insertStr) => `INSERT INTO count_test(id, col1, col2)  VALUES ${insertStr}`;
 
--- Pg
-DROP  TABLE IF EXISTS "count_test";
-CREATE TABLE "count_test" (
-  "id" int4 NOT NULL,
-  "col1" varchar(255) NOT NULL,
-  "col2" int4 NOT NULL,
-  PRIMARY KEY ("id")
-);
-CREATE INDEX "idx_col1" ON "count_test" USING btree (
-  "col1"
-);
-CREATE INDEX "idx_col2" ON "count_test" USING btree (
-  "col2"
-);
- */
-const sqlFactory = (insertStr) => `INSERT INTO count_test(id, col1, col2)  VALUES ${insertStr}`;
-const valueFactory = (id) => `(${id},'string-${id}', 1)`
+// complex insert
+const valueFactory = (id) => `(${id},'col1-${id}', 'col2-${id}', 1,'',1)`
+const sqlFactory = (insertStr) => `INSERT INTO count_complex_test(id, col1, col2, col3, col5, col7)  VALUES ${insertStr}`;
 
 mainMysql(0, 24000000)
 mainPgSql(0, 24000000)
+mainDockerPgSql(0, 24000000)
 mainOB(0, 24000000)
 
 async function mainMysql(startId, step) {
@@ -50,6 +29,20 @@ async function mainMysql(startId, step) {
 }
 
 async function mainPgSql(startId, step) {
+  const Realm = require('leoric');
+  const realm = new Realm({
+    dialect: 'postgres',
+    host: 'localhost',
+    user: 'postgres',
+    password: 'postgrespw',
+    database: 'mytest',
+  });
+  await chunk(realm, startId, step, { batchCountLimit: BATCH_ITEM_COUNT, jobStartId: startId });
+  // await sleepChunkJob(realm, startId, step)
+  // process.exit();
+}
+
+async function mainDockerPgSql(startId, step) {
   const Realm = require('leoric');
   const realm = new Realm({
     dialect: 'postgres',
